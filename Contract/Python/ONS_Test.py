@@ -11,6 +11,7 @@ from boa.interop.System.ExecutionEngine import GetScriptContainer, GetExecutingS
 from boa.interop.System.Blockchain import GetHeight, GetHeader
 from boa.interop.System.Storage import GetContext, Get, Put, Delete
 from boa.interop.System.Runtime import Log, Notify
+from boa.builtins import concat,substr,range,take
 
 Push = RegisterAction('event', 'operation', 'msg')
 
@@ -95,6 +96,15 @@ def Main(operation, args):
         return GetIPFSHash(domain_name)
     
 
+    
+    elif operation == 'checkStringVaild':
+        Str = args[0]
+        return stringCompare(Str)
+        
+        
+
+    
+
 
 
 def QueryDomain(domain_name):
@@ -119,7 +129,7 @@ def RegisterDomain(domain_name, owner):
     Check if the domain contain .
     if ture then return false
     '''
-    if detectStr(domain_name) == 1:
+    if stringCompare(domain_name):
         Notify("Domain has incorrect char inside")
         return False
         
@@ -206,7 +216,7 @@ def GetAddress(domain_name):
     if QueryDomain(domain_name) == False:
        return False
     context = GetContext()
-    address = Get(context, "{domain_name}.ons")
+    address = Get(context, "{domain_name}.neo")
     return address
 
 def AddIPFSHash(domain_name,IPFS):
@@ -231,6 +241,12 @@ def SetSubdomain(domain_name,subdomain):
     Notify(msg)
     context = GetContext()
     owner = Get(context, domain_name)
+    
+    if stringCompare(subdomain):
+        Notify("Domain has incorrect char inside")
+        return False
+        
+    
     if not owner:
         Notify("Domain is not yet registered")
         return False
@@ -257,12 +273,18 @@ def GetIPFSHash(domain_name):
     address = Get(context, "{domain_name}.ipfs")
     return address
 
-
-def detectStr(detect):
-    for i in range(0, len(detect)):
-        if substr(detect, i, 1) == ".":
-            return True
-        
-    return False
+def stringCompare(Str):
+    
+     allow = {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11
+            ,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23
+            ,"x":24,"y":25,"z":26,"-":27,"1":28,"2":29,"3":30,"4":31,"5":32,"6":33,"7":34,"8":39
+            ,"9":40,"0":41}
+     
+     for i in range(0, len(Str)):
+         if not allow.has_key(substr(Str, i, 1)):
+             return True
+         
+     return False
+         
 
 
