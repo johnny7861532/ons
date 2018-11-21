@@ -6,224 +6,203 @@ Created on Fri Nov  2 17:04:14 2018
 @author: johnnyhsieh
 """
 
-from boa.interop.System.Runtime import Log, GetTrigger, CheckWitness
+from boa.interop.System.Runtime import Log, GetTrigger, CheckWitness, Notify
 from boa.interop.System.ExecutionEngine import GetScriptContainer, GetExecutingScriptHash
 from boa.interop.System.Blockchain import GetHeight, GetHeader
 from boa.interop.System.Storage import GetContext, Get, Put, Delete
-from boa.interop.System.Runtime import Log, Notify
-from boa.builtins import concat,substr,range,take
+from boa.buildins import concat,substr,range,take
 
-Push = RegisterAction('event', 'operation', 'msg')
 
 def Main(operation, args):
+
     nargs = len(args)
     if nargs == 0:
         print("No domain name supplied")
         return 0
-
-    if operation == 'owner':
-        if nargs == 0:
-            print("No domain name supplied")
-            return 0
-        domain_name = args[0]
-        return QueryDomain(domain_name)
-
-    elif operation == 'release':
-        if nargs == 0:
-            print("No domain name supplied")
-            return 0
     
-        domain_name = args[0]
-        return DeleteDomain(domain_name)
+    if operation == 'Owner':
+        
+        if nargs == 0:
+            print("No domain name supplied")
+            return 0
+        
+        domain = args[0]
+        return Query(domain)
 
-    elif operation == 'register':
+    if operation == 'Register':
         if nargs < 2:
             print("required arguments: [domain_name] [owner]")
             return 0
         
-        domain_name = args[0]
+        domain = args[0]
         owner = args[1]
-        
-        
-        return RegisterDomain(domain_name, owner)
+        return Register(domain, owner)
 
-    elif operation == 'transfer':
+    if operation == 'Transfer':
         if nargs < 2:
             print("required arguments: [domain_name] [to_address]")
             return 0
-        domain_name = args[0]
-        to_address = args[1]
-        return TransferDomain(domain_name, to_address)
+        
+        domain = args[0]
+        to = args[1]
+        return Transfer(domain, to)
+
+    if operation == 'Release':
+        if nargs == 0:
+            print("No domain name supplied")
+            return 0
+        
+        domain = args[0]
+        return Release(domain)
     
-    elif operation == 'setAddress':
-       if nargs < 2:
-           print("required arguments: [domain_name] [to_address]")
-           return 0
-       domain_name = args[0]
-       to_address = args[1]
-       return SetAddress(domain_name,to_address)
-   
-    elif operation == 'addIPFS':
+    if operation == 'SetAddress':
         if nargs < 2:
-             print("required arguments: [domain_name] [IPFSHash]")
-             return 0
-        domain_name = args[0]
+            print("required arguments: [domain] [address]")
+            return 0
+        
+        domain = args[0]
+        address = args[1]
+        return SetAddress(domain,address)
+    
+    if operation == 'addIPFS':
+        if nargs < 2:
+            print("required arguments: [domain] [IPFS_Hash]")
+            return 0
+        
+        domain = args[0]
         IPFS = args[1]
-        return AddIPFSHash(domain_name,IPFS)
+        return AddIPFS(domain,IPFS)
     
-    elif operation == 'setSubdomain':
-        if nargs == 0:
-            print("required arguments: [domain_name] [subdomain]")
+    if operation == 'SetSubdomain':
+        if nargs < 2:
+            print("required arguments: [domain] [subdomain]")
             return 0
-        domain_name = args[0]
+        
+        domain = args[0]
         subdomain = args[1]
-        return SetSubdomain(domain_name,subdomain)
+        return SetSubdomain(domain,subdomain)
     
-    elif operation == 'getAddress':
+    if operation == 'GetAddress':
         if nargs == 0:
-            print("no address supply")
+            print("No domain name supplied")
             return 0
         
-        domain_name = args[0]
-        return GetAddress(domain_name)
-        
-    elif operation == 'getIPFS':
+        domain = args[0]
+        return GetAddress(domain)
+    
+    if operation == 'GetIPFS':
         if nargs == 0:
-            print("no domain supply")
+            print("No domain name supplied")
             return 0
         
-        domain_name = args[0]
-        return GetIPFSHash(domain_name)
+        domain = args[0]
+        return GetIPFS(domain)
     
-
-    
-    elif operation == 'checkStringVaild':
+    if operation == 'CheckStringVaild':
+        if nargs ==0:
+            print("Need at last one character")
+            return 0
+        
         Str = args[0]
-        return stringCompare(Str)
-        
-        
+        return CheckStringVaild(Str)   
+            
 
-    
-
+    return False
 
 
-def QueryDomain(domain_name):
-    msg = concat("QueryDomain: ", domain_name)
-    Notify(msg)
 
+
+
+
+
+
+
+def Query(domain):
     context = GetContext()
-    owner = Get(context, domain_name)
-    if not owner:
-        Notify("Domain is not yet registered")
-        return False
+    owner = Get(context, domain)
 
-    Notify(owner)
-    return owner
+    Notify('query', domain)
+    if owner != None:
+        return owner
 
+    return False
 
-def RegisterDomain(domain_name, owner):
-    msg = concat("RegisterDomain: ", domain_name)
-    Notify(msg)
+def Register(domain, owner):
+    context = GetContext()
+    occupy = Get(context, domain)
     
-    '''
-    Check if the domain contain .
-    if ture then return false
-    '''
-    if stringCompare(domain_name):
+    if CheckStringVaild(domain):
         Notify("Domain has incorrect char inside")
         return False
-        
+    
+    if occupy != None:
+        return False
+    Put(context, domain, owner)
+    Notify('Register', domain, owner)
 
-    if not CheckWitness(owner):
+    return True
+
+def Transfer(domain, to):
+    if to == None:
+        return False
+
+    context = GetContext()
+    owner = Get(context, domain)
+    if owner == None:
+        return False
+    if owner == to:
+        return True
+
+    is_owner = CheckWitness(owner)
+
+    if not is_owner:
+        return False
+
+    Put(context, domain, to)
+    Notify('Transfer', domain)
+
+    return True
+
+def Release(domain):
+    context = GetContext()
+    owner = Get(context, domain)
+    is_owner = CheckWitness(owner)
+    if not is_owner:
+        return False
+
+    Delete(context, domain)
+    Notify('Delete', domain)
+
+    return True
+
+def SetAddress(domain,address):
+    context = GetContext()
+    owner = Get(context, domain)
+    is_owner = CheckWitness(owner)
+    if not is_owner:
         Notify("Owner argument is not the same as the sender")
         return False
-
-    context = GetContext()
-    exists = Get(context, domain_name)
-    if exists:
-        Notify("Domain is already registered")
-        return False
-
-    Put(context, domain_name, owner)
-    msg2 = [domain_name,"is owned by ",owner]
-    Notify(msg2)
-    return True
-
-
-def TransferDomain(domain_name, to_address):
-    msg = concat("TransferDomain: ", domain_name)
-    Notify(msg)
-
-    context = GetContext()
-    owner = Get(context, domain_name)
-    if not owner:
-        Notify("Domain is not yet registered")
-        return False
-
-    if not CheckWitness(owner):
-        Notify("Sender is not the owner, cannot transfer")
-        return False
-
-    if not len(to_address) != 34:
-        Notify("Invalid new owner address. Must be exactly 34 characters")
-        return False
-
-    Put(context, domain_name, to_address)
-    msg2 = [domain_name,"is owned by " ,to_address]
-    Notify(msg2)
-    return True
-
-
-def DeleteDomain(domain_name):
-    msg = concat("DeleteDomain: ", domain_name)
-    Notify(msg)
-
-    context = GetContext()
-    owner = Get(context, domain_name)
-    if not owner:
-        Notify("Domain is not yet registered")
-        return False
-
-    if not CheckWitness(owner):
-        Notify("Sender is not the owner, cannot transfer")
-        return False
-
-    Delete(context, domain_name)
-    msg2 = [domain_name,"is release "]
-    Notify(msg2)
-    return True
-
-def SetAddress(domain_name,to_address):
-    msg = concat("SetAddress: ", domain_name)
-    Notify(msg)
-    context = GetContext()
-    owner = Get(context, domain_name)
-    if not CheckWitness(owner):
-        Notify("Owner argument is not the same as the sender")
-        return False
-    if not len(to_address) != 34:
+    if not len(address) != 34:
         Notify("Invalid new owner address. Must be exactly 34 characters")
         return False
     
-    Put(context,"{domain_name}.neo", to_address)
+    Put(context,"{domain_name}.neo", address)
+    Notify('SetAddress', address)
     return True
     
-
+    
 
 def GetAddress(domain_name):
-    msg = concat("GetAddress: ", domain_name)
-    Notify(msg)
-    if QueryDomain(domain_name) == False:
+    
+    if Query(domain_name) == False:
        return False
     context = GetContext()
     address = Get(context, "{domain_name}.neo")
     return address
 
-def AddIPFSHash(domain_name,IPFS):
-    msg = concat("AddIPFS: ",domain_name)
-    Notify(msg)
+def AddIPFS(domain,IPFS):
     context = GetContext()
-    owner = Get(context, domain_name)
+    owner = Get(context, domain)
     if not owner:
         Notify("Domain is not yet registered")
         return False
@@ -233,16 +212,15 @@ def AddIPFSHash(domain_name,IPFS):
         return False
     
     Put(context,"{domain_name}.ipfs",IPFS)
+    Notify('SetIPFS', IPFS)
     return True
 
     
-def SetSubdomain(domain_name,subdomain):
-    msg = concat("SetSubdomain: ",domain_name,subdomain)
-    Notify(msg)
+def SetSubdomain(domain,subdomain):
     context = GetContext()
-    owner = Get(context, domain_name)
+    owner = Get(context, domain)
     
-    if stringCompare(subdomain):
+    if CheckStringVaild(subdomain):
         Notify("Domain has incorrect char inside")
         return False
         
@@ -255,8 +233,8 @@ def SetSubdomain(domain_name,subdomain):
         Notify("Sender is not the owner, cannot set subdomain")
         return False
     
-    domain = concat(subdomain,".")
-    domain = concat(domain,domain_name)
+    domain_name = concat(subdomain,".")
+    domain = concat(domain_name,domain)
     
     Put(context,domain, owner)
     
@@ -264,16 +242,14 @@ def SetSubdomain(domain_name,subdomain):
     Notify(msg2)
     return True
     
-def GetIPFSHash(domain_name):
-    msg = concat("GetIPFSHash: ", domain_name)
-    Notify(msg)
-    if QueryDomain(domain_name) == False:
+def GetIPFS(domain):
+    if Query(domain) == False:
        return False
     context = GetContext()
     address = Get(context, "{domain_name}.ipfs")
     return address
 
-def stringCompare(Str):
+def CheckStringVaild(Str):
     
      allow = {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11
             ,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23
@@ -281,10 +257,12 @@ def stringCompare(Str):
             ,"9":40,"0":41}
      
      for i in range(0, len(Str)):
-         if not allow.has_key(substr(Str, i, 1)):
+         if not allow == (substr(Str, i, 1)):
              return True
          
      return False
          
+
+    
 
 
