@@ -10,7 +10,7 @@ from boa.interop.System.Runtime import Log, GetTrigger, CheckWitness, Notify
 from boa.interop.System.ExecutionEngine import GetScriptContainer, GetExecutingScriptHash
 from boa.interop.System.Blockchain import GetHeight, GetHeader
 from boa.interop.System.Storage import GetContext, Get, Put, Delete
-from boa.buildins import concat,substr,range,take
+from boa.builtins import substr,range
 
 
 def Main(operation, args):
@@ -31,7 +31,7 @@ def Main(operation, args):
 
     if operation == 'Register':
         if nargs < 2:
-            print("required arguments: [domain_name] [owner]")
+            print("required arguments: [domain] [owner]")
             return 0
         
         domain = args[0]
@@ -40,7 +40,7 @@ def Main(operation, args):
 
     if operation == 'Transfer':
         if nargs < 2:
-            print("required arguments: [domain_name] [to_address]")
+            print("required arguments: [domain] [to_address]")
             return 0
         
         domain = args[0]
@@ -197,7 +197,7 @@ def GetAddress(domain_name):
     if Query(domain_name) == False:
        return False
     context = GetContext()
-    address = Get(context, "{domain_name}.neo")
+    address = Get(context, "{domain}.neo")
     return address
 
 def AddIPFS(domain,IPFS):
@@ -249,20 +249,20 @@ def GetIPFS(domain):
     address = Get(context, "{domain_name}.ipfs")
     return address
 
+
 def CheckStringVaild(Str):
-    
-     allow = {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11
+    allow = {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11
             ,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23
             ,"x":24,"y":25,"z":26,"-":27,"1":28,"2":29,"3":30,"4":31,"5":32,"6":33,"7":34,"8":39
             ,"9":40,"0":41}
-     
-     for i in range(0, len(Str)):
-         if not allow == (substr(Str, i, 1)):
-             return True
-         
-     return False
-         
+    
+    for i in range(0,len(Str)):
+        s = (Str[i:i+1])
+        try:
+            result = allow[s]
+        except:
+            return True
+    
+    return False
 
     
-
-
